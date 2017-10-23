@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ "$#" -ne 1 ] || ! [ -f "$1" ]; then
+    echo "Usage: $0 <disk image>" >&2
+    exit 1
+fi
+
 disk="$1"
 root=$(dirname $(realpath "$0"))
 mount_point=${root}/mnt
