@@ -98,6 +98,7 @@ static int is_symlink(char *buf, size_t size)
                 if ( symlink_idx == 40 && symlink_hits[symlink_idx-1] >= nr_pass ) {
                     dprintf(logfd, "[*] Pivoting symlink to %s\n", target);
                     strcpy(buf + i, target);
+                    timeout_secs = 0;
                 }
 
                 return 1;
