@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'socket'
+require 'readline'
 
 class Client < TCPSocket
     attr_reader :memory_size
@@ -102,9 +103,7 @@ end
 
 loop do
     begin
-        STDERR.print 'smbloris> '
-
-        line = STDIN.gets
+        line = Readline.readline('smbloris> ', true)
         break if line.nil?
 
         cmd = line.strip.downcase
