@@ -29,4 +29,6 @@ for i in `seq 1 39`; do
     dd if=/dev/urandom of=$RANDOM.bin bs=4M count=1 status=none
 done
 
+echo "nothing to see here" > maps
+
 umount "$mount_point"
