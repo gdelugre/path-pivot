@@ -94,15 +94,15 @@ end
 pool = ConnectionPool.new(ARGV.first)
 
 def mem_unit_to_int(str)
-    unless str =~ /^\s*(?<n>\d+)(?<unit>[K|M|G]B?)?\s*$/i
+    unless str =~ /^\s*(?<n>\d+)(?<unit>[K|M|G])?B?\s*$/i
         raise ArgumentError, "Bad expression #{str.inspect}"
     end
 
     value = $~['n'].to_i
-    case $~['unit'].upcase
-    when 'K', 'KB' then value <<= 10
-    when 'M', 'MB' then value <<= 20
-    when 'G', 'GB' then value <<= 30
+    case $~['unit']
+    when /K/i then value <<= 10
+    when /M/i then value <<= 20
+    when /G/i then value <<= 30
     end
 
     value
