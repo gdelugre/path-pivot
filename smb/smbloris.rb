@@ -15,6 +15,14 @@ class Client < TCPSocket
 
         super(target, 445)
         send_nbss_header
+
+        STDERR.print '+'
+    end
+
+    def close
+        super unless self.closed?
+
+        STDERR.print '-'
     end
 
     private
@@ -44,7 +52,6 @@ class ConnectionPool
     end
 
     def add_client(size = Client::MAX_SIZE)
-        STDERR.puts "[*] Adding new client of #{size} bytes"
         @pool.push Client.new(@target, size)
     end
 
@@ -88,7 +95,7 @@ pool = ConnectionPool.new(ARGV.first)
 
 def mem_unit_to_int(str)
     unless str =~ /^\s*(?<n>\d+)(?<unit>[K|M|G]B?)?\s*$/i
-        raise ArgumentError, "Bad memory expression #{str.inspect}"
+        raise ArgumentError, "Bad expression #{str.inspect}"
     end
 
     value = $~['n'].to_i
@@ -99,6 +106,11 @@ def mem_unit_to_int(str)
     end
 
     value
+end
+
+def show_status(pool)
+    STDERR.puts "Number of connections: #{pool.count}"
+    STDERR.puts "Total memory size: #{pool.memory_size} bytes"
 end
 
 loop do
@@ -115,14 +127,19 @@ loop do
         when 'help', ??
             STDERR.puts "Available commands: quit, help, status, clear, add <mem>, free <mem>"
         when 'status'
-            STDERR.puts "Number of connections: #{pool.count}"
-            STDERR.puts "Total memory size: #{pool.memory_size} bytes"
+            show_status(pool)
         when 'clear'
             pool.clear
+            STDERR.puts
+            show_status(pool)
         when /^add\s+(?<arg>.*)$/
             pool.add_memory mem_unit_to_int $~['arg']
+            STDERR.puts
+            show_status(pool)
         when /^free\s+(?<arg>.*)$/
             pool.free_memory mem_unit_to_int $~['arg']
+            STDERR.puts
+            show_status(pool)
         else
             STDERR.puts "Unknown command #{cmd.inspect}"
         end
