@@ -148,6 +148,10 @@ static int is_symlink(char *buf, size_t size)
                 symlink_hit(symlink_num);
                 dprintf(logfd, "\n[*] Detected pattern \x1B[33m%s\x1B[0m (hit: %d)\n", buf + i, symlink_hits[symlink_num-1]);
 
+                //
+                // XXX: this first condition is specific to bypass a check on Samba 4.
+                // Remove if unnecessary.
+                //
                 if ( symlink_num == MAX_SYMLINKS && symlink_hits[symlink_num-1] == 1 ) {
                     pivot_symlink(buf + i, size - i, target);
                 }
