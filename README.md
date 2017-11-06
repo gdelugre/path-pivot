@@ -5,6 +5,8 @@ The principle behind this attack is to exploit a TOCTOU race by returning
 different results from the drive between between the time a file is checked and
 when it is accessed.
 
+More details about the attack can be found in [this blog post](https://gdelugre.github.io/2017/11/06/samba-path-pivot-attack/).
+
 ## Usage
 
 1. a disk image has to be created first. The script ``make_fs.sh`` will create
