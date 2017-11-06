@@ -20,5 +20,5 @@ mount_point="${root}/mnt"
 ${root}/fuse/bin/path-pivot -t 3 -L /tmp/path_pivot.log --pivot-to /proc/self -n 3 "$disk" "$mount_point"
 modprobe g_mass_storage file="${root}/mnt/path_pivot.img" ro=1
 
-trap ${root}/umount.sh "SIGINT"
+trap ${root}/umount.sh INT
 tail -f /tmp/path_pivot.log
